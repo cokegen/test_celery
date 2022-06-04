@@ -1,0 +1,126 @@
+version: "3.9"
+
+networks:
+  internal:
+    name: internal # docker network name
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: internal # system interface name
+    ipam:
+      driver: default
+      config:
+        - subnet: ${NETWORK_INTERNAL:?Please set a CIDR for the internal docker network in the .env file}
+
+services:
+
+  rabbitmq:
+    image: "rabbitmq:3.10-management-alpine"
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///run/systemd/journal/syslog"
+        tag: rabbitmq
+    networks:
+      - internal
+    ports:
+      - target: 5672
+        published: 5672
+        protocol: tcp
+        mode: host
+      - target: 15672
+        published: 15672
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: ./datadirs/rabbitmq
+        target: /var/lib/rabbitmq
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    environment:
+      # adding timezone variable and related R/O volumes to keep timezones the same between host and containers
+      # [2022-05-24 12:35:54,634: WARNING/MainProcess] Substantial drift from celery@2e3846eca357 may mean clocks are out of sync.  Current drift is 10800 seconds.  [orig: 2022-05-24 12:35:54.634636 recv: 2022-05-24 15:35:54.633587]
+      TZ: "America/Argentina/Buenos_Aires"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Please set a default user for RabbitMQ at the .env file}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Please set a default pass for RabbitMQ at the .env file}
+
+  redis:
+    image: "redis:7-alpine"
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///run/systemd/journal/syslog"
+        tag: redis
+    networks:
+      - internal
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: host
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    environment:
+      TZ: "America/Argentina/Buenos_Aires"
+      REDIS_HOST: redis
+
+  app1:
+    build:
+      context: ./
+      dockerfile: Dockerfile-app1
+      args:
+        - RMQ_SCHEDULER_QUEUE
+        - APP_NAME_SCHEDULER
+    depends_on:
+      - rabbitmq
+      - redis
+    #command: ["./wait-for", "rabbitmq:5672", "--", "./wait-for", "redis:6379", "--", "celery", "--app", "app1", "worker", "-l", "info", "-c", "4", "-n", "app1_1.%h", "-Q", "pipeline_scheduler"]
+    #command: ["/bin/sleep", "infinity"]
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///run/systemd/journal/syslog"
+        tag: app1
+    networks:
+      - internal
+    volumes:
+      - type: bind
+        source: ./datadirs/shared
+        target: ${SHARED_DIR:?Please set a shared directory or path for the apps at the .env file}
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    environment:
+      TZ: "America/Argentina/Buenos_Aires"
+      RMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+
+  app2:
+    build:
+      context: ./
+      dockerfile: Dockerfile-app2
+      args:
+        - RMQ_DECIDER_QUEUE
+        - APP_NAME_DECIDER
+    depends_on:
+      - rabbitmq
+      - redis
+    #command: ["./wait-for", "rabbitmq:5672", "--", "./wait-for", "redis:6379", "--", "celery", "--app", "app2", "worker", "-l", "info", "-c", "4", "-n", "app2_1.%h", "-Q", "task_scheduler"]
+    #command: ["/bin/sleep", "infinity"]
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///run/systemd/journal/syslog"
+        tag: app2
+    networks:
+      - internal
+    volumes:
+      - type: bind
+        source: ./datadirs/shared
+        target: ${SHARED_DIR:?Please set a shared directory or path for the apps at the .env file}
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    environment:
+      TZ: "America/Argentina/Buenos_Aires"
+      RMQ_HOST: rabbitmq
+      REDIS_HOST: redis

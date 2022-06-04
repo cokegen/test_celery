@@ -1,0 +1,33 @@
+FROM python:3.8-alpine
+
+ARG RMQ_SCHEDULER_QUEUE
+ARG APP_NAME_SCHEDULER
+
+ENV RMQ_SCHEDULER_QUEUE=${RMQ_SCHEDULER_QUEUE}
+ENV APP_NAME_SCHEDULER=${APP_NAME_SCHEDULER}
+
+# celery documentation states that a SIGTERM shutdown the worker
+# https://docs.celeryq.dev/en/latest/userguide/workers.html#stopping-the-worker
+STOPSIGNAL SIGTERM
+
+# emulate activating the venv
+# https://pythonspeed.com/articles/activate-virtualenv-dockerfile/
+ENV VIRTUAL_ENV=/opt/app1/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+WORKDIR /opt/app1
+
+# install dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
+
+COPY wait-for .
+RUN chmod 755 ./wait-for
+
+# copy necessary files for the application
+COPY config.py .
+COPY app1.py .
+
+CMD exec celery --app ${APP_NAME_SCHEDULER} worker -l INFO -c 4 -n ${APP_NAME_SCHEDULER}.%h -Q ${RMQ_SCHEDULER_QUEUE}
