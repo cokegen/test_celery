@@ -8,20 +8,29 @@ Generate required directories that will be used by RabbitMQ and the apps to stor
 mkdir -p datadirs/{rabbitmq,redis,shared}
 ```
 
-Upgrading pip is optional (depends on your own environment)
+Upgrading pip is optional (depends on your own environment):
 ```bash=2
 pip install --upgrade pip
+```
+Create a virtual environment for just this test:
+```bash=3
 python3 -m venv venv/
+```
+Activate the virtual environment:
+```bash=4
 source venv/bin/activate
+```
+Now that you have your venv activated, proceed to install all requirements for this project:
+```bash=5
 pip install -r requirements
 ```
 
-To start docker compose
+Docker Compose can be started now:
 ```bash=6
 docker compose up
 ```
 
-Some flags to force build and recreate containers (optional)
+An alternative way to start Docker Compose, so it forces building and recreating containers (this is completely optional, but recommended instead of the above version):
 ```bash=7
 docker compose up --build --force-recreate
 ```
