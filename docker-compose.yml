@@ -40,7 +40,7 @@ services:
     environment:
       # adding timezone variable and related R/O volumes to keep timezones the same between host and containers
       # [2022-05-24 12:35:54,634: WARNING/MainProcess] Substantial drift from celery@2e3846eca357 may mean clocks are out of sync.  Current drift is 10800 seconds.  [orig: 2022-05-24 12:35:54.634636 recv: 2022-05-24 15:35:54.633587]
-      TZ: "America/Argentina/Buenos_Aires"
+      TZ: ${TIMEZONE:?Please set a valid timezone for the apps at the .env file}
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Please set a default user for RabbitMQ at the .env file}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Please set a default pass for RabbitMQ at the .env file}
 
@@ -62,7 +62,7 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
     environment:
-      TZ: "America/Argentina/Buenos_Aires"
+      TZ: ${TIMEZONE:?Please set a valid timezone for the apps at the .env file}
       REDIS_HOST: redis
 
   app1:
@@ -91,7 +91,7 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
     environment:
-      TZ: "America/Argentina/Buenos_Aires"
+      TZ: ${TIMEZONE:?Please set a valid timezone for the apps at the .env file}
       RMQ_HOST: rabbitmq
       REDIS_HOST: redis
 
@@ -121,6 +121,6 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
     environment:
-      TZ: "America/Argentina/Buenos_Aires"
+      TZ: ${TIMEZONE:?Please set a valid timezone for the apps at the .env file}
       RMQ_HOST: rabbitmq
       REDIS_HOST: redis
